@@ -1,0 +1,194 @@
+# ═══════════════════════════════════════════════════════════════════════
+# ED-MRDT Mini Demo: EGFR + EGF on 1×1 µm² membrane
+# ═══════════════════════════════════════════════════════════════════════
+# Purpose: Fast end-to-end validation of full pipeline
+# Target: <30 seconds wall time
+# Key test: FLIM image shows donor quenching where RL complexes exist
+# ═══════════════════════════════════════════════════════════════════════
+
+name: "Mini Demo — EGFR-EGF 1µm²"
+version: "1.1.0"
+
+membrane:
+  size: [1.0, 1.0]              # 1×1 µm² (quarter of canonical)
+  periodic: [true, true]
+  geometry_type: planar
+
+diffusion_field:
+  type: uniform
+  default_D_factor: 1.0
+  regions: []
+
+species:
+  - name: EGFR
+    diffusion_coefficient: 0.05
+    radius: 5.0
+    color: "#4CAF50"
+    states: [inactive]
+
+  - name: EGF
+    diffusion_coefficient: 10.0
+    radius: 2.0
+    color: "#FF9800"
+
+  - name: EGFR_EGF
+    diffusion_coefficient: 0.04
+    radius: 6.0
+    color: "#F44336"
+    states: [bound]
+
+reactions:
+  - name: EGF_binding
+    reactants: [EGFR, EGF]
+    products: [EGFR_EGF]
+    kon: 0.1                   # µm²/s (2D macroscopic rate)
+    koff: 0.01
+    contact_radius: 7.0
+
+potentials:
+  - species_a: EGFR
+    species_b: EGFR
+    potential_type: wca
+    parameters:
+      sigma: 8.0
+      epsilon: 2.5
+  - species_a: EGFR_EGF
+    species_b: EGFR_EGF
+    potential_type: wca
+    parameters:
+      sigma: 10.0
+      epsilon: 2.5
+
+# 50 EGFR + 25 EGF = 75 particles (same density as canonical)
+initial_populations:
+  EGFR: 50
+  EGF: 25
+
+fluorophores:
+  - name: Alexa488
+    states:
+      - name: S0
+        is_fluorescent: false
+        is_absorbing: true
+      - name: S1
+        is_fluorescent: true
+        quantum_yield: 0.92
+        emission_wavelength: 519.0
+      - name: T1
+        is_fluorescent: false
+        is_absorbing: false
+      - name: bleached
+        is_fluorescent: false
+        is_absorbing: false
+        is_terminal: true
+    thermal_rates:
+      S1:
+        S0: 2.44e+08
+        T1: 1.0e+06
+        bleached: 1.0e+03
+      T1:
+        S0: 1.0e+04
+        bleached: 1.0e+02
+    absorption_cross_section: 3.0e-16
+    excitation_wavelength: 488.0
+    extinction_coeff: 73000.0
+    tau_rad: 4.1e-09
+    tau_nr_base: 1.0e-07
+    environment_sensitivity: none
+
+  - name: Alexa555
+    states:
+      - name: S0
+        is_fluorescent: false
+        is_absorbing: true
+      - name: S1
+        is_fluorescent: true
+        quantum_yield: 0.10
+        emission_wavelength: 565.0
+      - name: T1
+        is_fluorescent: false
+        is_absorbing: false
+      - name: bleached
+        is_fluorescent: false
+        is_absorbing: false
+        is_terminal: true
+    thermal_rates:
+      S1:
+        S0: 3.33e+09
+        T1: 5.0e+05
+        bleached: 5.0e+02
+      T1:
+        S0: 5.0e+03
+        bleached: 50.0
+    absorption_cross_section: 1.5e-16
+    excitation_wavelength: 555.0
+    extinction_coeff: 155000.0
+    tau_rad: 3.0e-10
+    tau_nr_base: 1.0e-08
+    environment_sensitivity: none
+
+fret_pairs:
+  - donor_type: Alexa488
+    acceptor_type: Alexa555
+    R0: 6.4
+    kappa2: 0.6667
+
+dye_attachments:
+  - species: EGFR
+    fluorophore: Alexa488
+    labeling_efficiency: 0.8
+    linker_length: 1.5
+    position_on_species: extracellular
+
+  - species: EGF
+    fluorophore: Alexa555
+    labeling_efficiency: 0.9
+    linker_length: 1.0
+    position_on_species: N-term
+
+objective:
+  NA: 1.4
+  magnification: 100.0
+  immersion: oil
+  n_immersion: 1.515
+
+laser:
+  wavelength: 488.0
+  repetition_rate: 4.0e+07
+  pulse_width: 1.0e-10
+  power: 5.0e-06
+  beam_profile: gaussian
+  beam_waist: 250.0
+
+detector:
+  type: SPAD
+  dark_count_rate: 100.0
+  detection_efficiency: 0.2
+  timing_jitter: 5.0e-11
+  dead_time: 1.0e-07
+  afterpulsing_prob: 0.005
+
+scan:
+  mode: confocal
+  pixel_size: 59.0             # nm/pixel — Nyquist for confocal FWHM≈126 nm
+  pixels_x: 17                 # 17 × 59nm = 1003nm ≈ 1.0 µm
+  pixels_y: 17
+  dwell_time: 2.0e-05
+  n_frames: 2                  # 2 frames
+  frame_interval: 0.1          # 100 ms between frames (fast for demo)
+  pinhole_diameter: 1.0
+
+tcspc:
+  n_bins: 256
+  time_range: 2.5e-08
+
+psf:
+  type: gibson_lanni
+  emission_wavelength: 519.0
+
+simulation_time: 0.2             # 200 ms total
+bd_timestep: 1.0e-04           # 100 µs → 1000 BD steps/frame
+random_seed: 42
+pss_mode: true
+n_threads: 8
+ram_limit_gb: 12.0

@@ -1,0 +1,247 @@
+# ═══════════════════════════════════════════════════════════════════════
+# ED-MRDT Configuration: EGFR + EGF binding on membrane
+# ═══════════════════════════════════════════════════════════════════════
+#
+# System: Epidermal Growth Factor Receptor (EGFR) + EGF ligand
+# Observable: FLIM-FRET imaging of receptor-ligand binding
+# Reference: Arteaga & Engelman, Cancer Cell 2014 (EGFR biology)
+#            Alexa488/555 FRET pair: Invitrogen/ThermoFisher datasheets
+#
+# Area: 2×2 µm² — minimum rigorous area for FLIM-FRET.
+#   Justification (5 criteria):
+#     C1: N_complex ≥ 30 at equilibrium → need L ≥ 1.67 µm
+#     C2: PBC correlation length (EGFR) ~ 400 nm << 2 µm
+#     C3: FOV ≥ 4×4 independent PSFs → 11×11 PSFs ✅
+#     C4: ≥30 dual-labeled FRET pairs → ~43 at L=2µm ✅
+#     C5: Nyquist sampling with 59nm pixels → 34×34 pixels ✅
+#
+# Units convention:
+#   Length:  µm (micrometers) for membrane, nm for molecular
+#   Time:   s (seconds)
+#   Rates:  s⁻¹ (unimolecular), M⁻¹s⁻¹ or µm²s⁻¹ (bimolecular 2D)
+#   Energy: kBT (thermal units)
+# ═══════════════════════════════════════════════════════════════════════
+
+name: "EGFR-EGF membrane FLIM-FRET"
+version: "1.1.0"
+
+# ─── MEMBRANE DOMAIN ─────────────────────────────────────────────────
+membrane:
+  size: [2.0, 2.0]              # µm × µm (minimum rigorous area)
+  periodic: [true, true]        # PBC = infinite homogeneous membrane
+  geometry_type: planar
+
+# Spatially varying diffusion — DISABLED for 2µm box
+# (lipid raft radius=2µm would fill entire box → not physical)
+diffusion_field:
+  type: uniform
+  default_D_factor: 1.0
+  regions: []
+
+# ─── MOLECULAR SPECIES ───────────────────────────────────────────────
+species:
+  - name: EGFR
+    diffusion_coefficient: 0.05  # µm²/s (Leu et al., Biophys J 2006)
+    radius: 5.0                  # nm (extracellular domain)
+    color: "#4CAF50"
+    states: [inactive, active, dimerized]
+    state_transitions:
+      inactive:
+        active: 0.0
+      active:
+        inactive: 0.001
+    D_per_state:
+      inactive: 0.05
+      active: 0.05
+      dimerized: 0.025
+
+  - name: EGF
+    diffusion_coefficient: 10.0  # µm²/s (small soluble ligand)
+    radius: 2.0                  # nm
+    color: "#FF9800"
+
+  - name: EGFR_EGF
+    diffusion_coefficient: 0.04  # µm²/s (complex slightly slower)
+    radius: 6.0                  # nm
+    color: "#F44336"
+    states: [bound]
+
+# ─── REACTIONS ────────────────────────────────────────────────────────
+reactions:
+  - name: EGF_binding
+    reactants: [EGFR, EGF]
+    products: [EGFR_EGF]
+    kon: 0.1                     # µm²/s (2D macroscopic rate, Shankaran & Bhatt 2007)
+    koff: 0.01                   # s⁻¹ (Kd ~ 10 nM)
+    contact_radius: 7.0          # nm
+
+  - name: EGFR_dimerization
+    reactants: [EGFR_EGF, EGFR_EGF]
+    products: [EGFR_EGF, EGFR_EGF]
+    kon: 0.05                    # µm²/s (2D, slower than EGF binding)
+    koff: 0.1
+    contact_radius: 10.0
+
+# ─── PAIR POTENTIALS ─────────────────────────────────────────────────
+potentials:
+  - species_a: EGFR
+    species_b: EGFR
+    potential_type: wca
+    parameters:
+      sigma: 8.0                 # nm
+      epsilon: 2.5               # kBT
+
+  - species_a: EGFR_EGF
+    species_b: EGFR_EGF
+    potential_type: wca
+    parameters:
+      sigma: 10.0
+      epsilon: 2.5
+
+  - species_a: EGFR
+    species_b: EGFR_EGF
+    potential_type: wca
+    parameters:
+      sigma: 9.0
+      epsilon: 2.5
+
+# ─── INITIAL POPULATIONS ─────────────────────────────────────────────
+# Densities: EGFR 100/µm², EGF 50/µm² on 4 µm² → 400 + 200 = 600
+initial_populations:
+  EGFR: 400                      # 100/µm² × 4 µm²
+  EGF: 200                       # 50/µm² × 4 µm²
+
+# ─── FLUOROPHORE PHOTOPHYSICS ────────────────────────────────────────
+fluorophores:
+  - name: Alexa488
+    states:
+      - name: S0
+        is_fluorescent: false
+        is_absorbing: true
+      - name: S1
+        is_fluorescent: true
+        quantum_yield: 0.92
+        emission_wavelength: 519.0
+      - name: T1
+        is_fluorescent: false
+        is_absorbing: false
+      - name: bleached
+        is_fluorescent: false
+        is_absorbing: false
+        is_terminal: true
+    thermal_rates:
+      S1:
+        S0: 2.44e+08
+        T1: 1.0e+06
+        bleached: 1.0e+03
+      T1:
+        S0: 1.0e+04
+        bleached: 1.0e+02
+    absorption_cross_section: 3.0e-16
+    excitation_wavelength: 488.0
+    extinction_coeff: 73000.0
+    tau_rad: 4.1e-09
+    tau_nr_base: 1.0e-07
+    environment_sensitivity: none
+
+  - name: Alexa555
+    states:
+      - name: S0
+        is_fluorescent: false
+        is_absorbing: true
+      - name: S1
+        is_fluorescent: true
+        quantum_yield: 0.10
+        emission_wavelength: 565.0
+      - name: T1
+        is_fluorescent: false
+        is_absorbing: false
+      - name: bleached
+        is_fluorescent: false
+        is_absorbing: false
+        is_terminal: true
+    thermal_rates:
+      S1:
+        S0: 3.33e+09
+        T1: 5.0e+05
+        bleached: 5.0e+02
+      T1:
+        S0: 5.0e+03
+        bleached: 50.0
+    absorption_cross_section: 1.5e-16
+    excitation_wavelength: 555.0
+    extinction_coeff: 155000.0
+    tau_rad: 3.0e-10
+    tau_nr_base: 1.0e-08
+    environment_sensitivity: none
+
+# ─── FRET PAIRS ──────────────────────────────────────────────────────
+fret_pairs:
+  - donor_type: Alexa488
+    acceptor_type: Alexa555
+    R0: 6.4                      # nm (Förster radius)
+    kappa2: 0.6667
+    intra_complex_distance: 5.0  # nm (D-A distance within EGFR-EGF complex)
+
+# ─── DYE ATTACHMENTS ─────────────────────────────────────────────────
+dye_attachments:
+  - species: EGFR
+    fluorophore: Alexa488
+    labeling_efficiency: 0.8
+    linker_length: 1.5
+    position_on_species: extracellular
+
+  - species: EGF
+    fluorophore: Alexa555
+    labeling_efficiency: 0.9
+    linker_length: 1.0
+    position_on_species: N-term
+
+# ─── VIRTUAL MICROSCOPE ──────────────────────────────────────────────
+objective:
+  NA: 1.4
+  magnification: 100.0
+  immersion: oil
+  n_immersion: 1.515
+
+laser:
+  wavelength: 488.0
+  repetition_rate: 4.0e+07       # 40 MHz
+  pulse_width: 1.0e-10
+  power: 5.0e-06
+  beam_profile: gaussian
+  beam_waist: 250.0
+
+detector:
+  type: SPAD
+  dark_count_rate: 100.0
+  detection_efficiency: 0.2
+  timing_jitter: 5.0e-11
+  dead_time: 1.0e-07
+  afterpulsing_prob: 0.005
+
+scan:
+  mode: confocal
+  pixel_size: 59.0               # nm/pixel (Nyquist for confocal FWHM=126nm: pixel<63nm)
+  pixels_x: 34                   # 34 × 59nm = 2006nm ≈ 2.0 µm
+  pixels_y: 34
+  dwell_time: 2.0e-05            # s/pixel (20 µs)
+  n_frames: 60
+  frame_interval: 1.0
+  pinhole_diameter: 1.0
+
+tcspc:
+  n_bins: 256
+  time_range: 2.5e-08            # 25 ns = 1/40MHz
+
+psf:
+  type: gibson_lanni
+  emission_wavelength: 519.0
+
+# ─── SIMULATION PARAMETERS ───────────────────────────────────────────
+simulation_time: 60.0            # s
+bd_timestep: 1.0e-05             # s (10 µs — no compromise)
+random_seed: 42
+pss_mode: true    # PSS=default (fast). Set false for PbP (exact photon stats, ~34x slower)
+n_threads: 8
+ram_limit_gb: 12.0

@@ -1,0 +1,45 @@
+# ═══════════════════════════════════════════════════════════════
+# ED-MRDT v1.1 — .gitignore
+# ═══════════════════════════════════════════════════════════════
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Results and outputs (large, generated — not tracked)
+results_*/
+videos_*/
+
+# Temporary test outputs
+e2e_te_v2_results.json
+test_bd*.gif
+
+# Virtual environments
+.venv/
+venv/
+env/
