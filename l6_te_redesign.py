@@ -557,7 +557,8 @@ def sim_results_to_trials_dict(
     -------
     series_dict : dict[str, ndarray(n_trials, n_frames)]
         Keys: "n_complexes", "n_bleached", "intensity", "tau_mean",
-              "E_mean", "density", "msd"
+              "E_mean", "density", "msd",
+              "species_{name}" for each species (e.g., "species_PIP3")
     """
     if not sim_results:
         raise ValueError("Need at least 1 SimulationResult")
@@ -569,10 +570,15 @@ def sim_results_to_trials_dict(
             raise ValueError(
                 f"Replica {i} has {sr.n_frames} frames, expected {n_frames}")
 
-    # Pre-allocate trial arrays
+    # Pre-allocate trial arrays — generic keys
     keys = ["n_complexes", "n_bleached", "intensity",
             "tau_mean", "E_mean", "density", "msd"]
     trials = {k: np.zeros((n_trials, n_frames)) for k in keys}
+
+    # Per-species count keys — extracted from first replica's species list
+    species_names = [sp.name for sp in sim_results[0].config.species]
+    for sp_name in species_names:
+        trials[f"species_{sp_name}"] = np.zeros((n_trials, n_frames))
 
     for r, sr in enumerate(sim_results):
         config = sr.config
@@ -603,7 +609,7 @@ def sim_results_to_trials_dict(
             else:
                 trials["tau_mean"][r, fi] = tau_d_ns
 
-        # E_mean, density, msd per frame
+        # E_mean, density, per-species counts per frame
         for fi, fr in enumerate(sr.frames):
             gt = fr.ground_truth
             # FRET efficiency
@@ -614,6 +620,12 @@ def sim_results_to_trials_dict(
                     gt.fret_efficiency_exact[donors])
             # Density
             trials["density"][r, fi] = gt.is_alive.sum() / area
+            # Per-species alive counts
+            if gt.species_counts:
+                for sp_name, count in gt.species_counts.items():
+                    key = f"species_{sp_name}"
+                    if key in trials:
+                        trials[key][r, fi] = float(count)
 
         # MSD proxy
         for fi in range(1, n_frames):
