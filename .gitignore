@@ -45,3 +45,5 @@ venv/
 env/
 *.aux
 *.log
+docs/manuscript_*
+docs/build_manuscript.js
