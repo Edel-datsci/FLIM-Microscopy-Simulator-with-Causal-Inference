@@ -47,3 +47,7 @@ env/
 *.log
 docs/manuscript_*
 docs/build_manuscript.js
+*.tiff
+docs/Primer*
+docs/manuscript_plan*
+docs/build_manuscript*

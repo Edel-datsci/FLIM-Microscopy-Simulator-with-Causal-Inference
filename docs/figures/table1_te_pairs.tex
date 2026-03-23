@@ -1,0 +1,9 @@
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{clllcccc}
+\toprule
+Pair & Source (X) & Target (Y) & Hypothesis & CTE(X$\to) & CTE(Y$\to) & \textit{p}-value & Lag \midrule
+P1 & PTEN\_T1 & PIP3 & PTEN catalyzes PIP3 degradation & 0.100 & 0.024 & 1.000 & 2 \nP2 & PIP3 & PTEN\_T1 & PIP3 inhibits PTEN recruitment & 0.024 & 0.100 & 1.000 & 2 \nP3 & PI3K & PIP3 & PI3K produces PIP3 & 0.058 & 0.000 & 0.274 & 2 \nP4 & PTEN\_T1 & PTEN\_T2 & PTEN conformational switching & 0.000 & 0.183 & 1.000 & 5 \nP5 & PIP3 & n\_complexes & PIP3 drives biosensor binding & 0.008 & 0.113 & 0.378 & 2 \nP6 & n\_complexes & tau\_mean & Binding causes lifetime change & \textbf{0.141} & 0.018 & \textbf{0.005***} & 1 \nP7 & msd & n\_complexes & Diffusion limits binding & 0.034 & 0.007 & 0.910 & 2 \nP8 & n\_bleached & intensity & Bleaching causes signal loss & 0.043 & 0.002 & 0.403 & 5 \nP9 & E\_mean & n\_bleached & FRET modulates bleaching & 0.000 & 0.058 & 0.851 & 2 \nP10 & msd & tau\_mean & Mobility causes lifetime (neg.\ ctrl) & 0.069 & 0.002 & 0.254 & 2 \n\bottomrule
+\end{tabular}
+\end{table}
